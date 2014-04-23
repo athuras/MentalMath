@@ -1,0 +1,6 @@
+*.pyc
+*.swp
+*.loc
+*.tic
+*.toc
+*.synctex.gz
