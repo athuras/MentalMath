@@ -1,4 +1,5 @@
 # Source:
+# @author tcstewar
 # https://github.com/tcstewar/parser/blob/master/pointer.py
 
 import numpy as np
@@ -6,7 +7,7 @@ from numpy.fft import fft
 from numpy.fft import ifft
 from numpy.linalg import norm
 
-class SemanticPointer:
+class SemanticPointer(object):
     def __init__(self, N=None, data=None):
         if data is not None:
             self.v = np.array(data)
