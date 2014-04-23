@@ -1,0 +1,103 @@
+\documentclass[journal]{IEEEtran}
+
+\usepackage{cite}
+\usepackage{amsfonts}
+\usepackage[cmex10]{amsmath}
+\usepackage{graphicx}
+%\usepackage{algorithmic}
+\usepackage{array}
+\usepackage{stfloats}
+\usepackage{url}
+\usepackage{caption}
+
+\begin{document}
+\title{Lambda Calculus in Neurons}
+
+\author{Alexander~Huras\\Systems Design Engineering\\University of Waterloo\\athuras@uwaterloo.ca}%
+
+
+\markboth{SYDE 556: Final Report}{}
+
+\maketitle
+
+\begin{abstract}
+	I built a model that generates Church numerals, or more specification, successively performs function application a-la lambda calculus.
+	It is very slow.
+
+\end{abstract}
+
+
+\section{Introduction}
+
+\section{Background}
+
+\subsection{Vector Symbolic Architectures}
+
+Briefly describe semantic pointers, or `symbols-as-high-dimensional-vectors'.
+Briefly describe the utility.
+
+Describe semantic binding.
+
+\subsection{Lambda Calculus}
+
+Define LC informally.
+
+\subsection{Church Numerals}
+
+Show the default Church Numeral Table.
+
+\section{Symbolic Enumeration}
+
+For this project the goal was to explore the extent to which arbitrary mathematical structures could be generated on a symbolic level.
+A good basis for this process (both due to personal interest, as well as due to its simplicity) is Lambda Calculus.
+
+
+\section{System Description}
+
+At the highest level, the system was designed to \emph{enumerate}.
+Akin to Church Numerals---which are defined in terms of repeated function application, I designed the system to replicate this process by way of repeated semantic \emph{binding}.
+The use of semantic pointers (or \emph{symbols}) to represent \emph{functions} in this way opens the door for arbitrarily intensive symbol processing.
+
+On a more linguistic side, symbolic systems can be used to parse and interpret language, while in a more abstract sense, this facility yields a greater capability for truly general algorithms.
+
+\subsection{Cortex}
+
+The cortex consists of the term-memory, and the associated neural machinery function application.
+The memory is shown in Figure~\ref{fig:cortex:memory}, and ideally consists of four high-dimensional integrators/buffers.
+The time constants on the buffers were chosen to be fast enough that relatively significant changes could be observed on small simulation time-scales.
+The value $\tau=20 [ms]$ seemed reasonable.
+
+\begin{figure}
+	\centering
+	\includegraphics[width=\textwidth]{figures/dummy.png}
+	\label{fig:cortex:memory}
+\end{figure}
+
+
+\begin{figure}
+	\centering
+	\includegraphics[width=\textwidth]{figures/dummpy.png}
+	\label{fig:cortex:applier}
+\end{figure}
+
+\section{Design Specification}
+
+In order to present a model that is vaguely biologicaly plausible, it is useful to draw analogies between symbol processing models, and brain regions with similar function.
+Symbol processing, particularly parsing and perhaps function application is a canonical computational task performed in language processing.
+As such, neuron parameters were drawn from areas canonically associated with language processing (particularly listening vs. speaking).
+Namely, Brodman area 22---the home of Wernicke's area.
+Furthermore, it has been suggested that the neural resources used for language processing (in Wernicke's area of not), are also used for processing information in other domains as well, giving some credence that the processing is symbolic/general, rather than domain-tuned.
+
+The Basal Ganglia was modelled with parameters from (TERRY's PAPER, ORIGINAL PAPER), and is used to handle control flow throughout the model.
+
+
+
+
+
+
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{bib}
+
+\end{document}
