@@ -1,103 +1,478 @@
-\documentclass[journal]{IEEEtran}
-
-\usepackage{cite}
-\usepackage{amsfonts}
-\usepackage[cmex10]{amsmath}
+\documentclass{report}
+\usepackage{sydewkrpt}
 \usepackage{graphicx}
-%\usepackage{algorithmic}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{float}
+\usepackage[font=it]{caption}
 \usepackage{array}
-\usepackage{stfloats}
-\usepackage{url}
-\usepackage{caption}
+\usepackage{cite}
+\usepackage{listings}
+\usepackage[toc,page]{appendix}
+\usepackage[]{algorithm2e}
+
+
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+
+\date{\today}
+\author{Alexander Huras}
 
 \begin{document}
-\title{Lambda Calculus in Neurons}
 
-\author{Alexander~Huras\\Systems Design Engineering\\University of Waterloo\\athuras@uwaterloo.ca}%
+\waterlootitle{Lambda Calculus, Enumeration, and Neurons}{
+	SYDE 556: Final Project
+}{Alexander Huras}
 
+\dotableofcontents
+\newpage
 
-\markboth{SYDE 556: Final Report}{}
-
-\maketitle
-
-\begin{abstract}
-	I built a model that generates Church numerals, or more specification, successively performs function application a-la lambda calculus.
-	It is very slow.
+\begin{abstract} 
+Given that symbolic processing can be modelled in the activities of spiking neurons, this report explores a novel application that involves the use of a mathematical formalism that has been around for quite some time: the lambda calculus.
+By treating anonymous function application and abstraction as generic semantic binding, a novel model of Church Enumeration is proposed.
+This model integrates NEF semantic binding patterns with a Basal Ganglia/Thalamus control circuit, and is designed to compute (severely limited) generic recursive programs such as \lq\lq{}Count $TWO$ more than $ONE$\rq\rq{}.
+This works in theory, but ultimately performs poorly in simulation, as the model can easily get lost after a few internal \lq{}iterations\rq{}.
+We hypothesize that this is likely a limitation in the model, but entertain the prospect that the class of errors present in the model\rq{}s design is similar to the class of errors that would be present in a successful model.
 
 \end{abstract}
 
 
-\section{Introduction}
+\chapter{Background}
 
-\section{Background}
+At the highest level (literally and figuratively), intelligence is the capability to abstract and reason.
+One of the many thoughts on how this could be conducted (either computationally or otherwise) is through the use of \emph{symbolic processing}, which is to say: the expression of computation through formalisms regarding abstract constructs and concepts.
+This project began as a sort of \emph{vision quest} into the wild and wonderful world of programming language design, and particularly, the methods that have been devised in order to facilitate the \emph{expression} of computation.
+Through trials and tribulations the idea of expressing computation as a graph of neuromorphic transformations, as symbols, and as lambda expressions were brought together into the bizarre but oddly satisfying model that ultimately can perform Church Enumeration, poorly, under most circumstances.
 
-\subsection{Vector Symbolic Architectures}
+This chapter is broken up into two major components---the first of which can be considered a superficial look at the structure and application of lambda calculus, specifically in relation to Church encoding.
+The second consists of a high-level overview of the geometric architecture that enables general symbol processing within the constraints of the Neural Engineering Framework (NEF) algorithm.
 
-Briefly describe semantic pointers, or `symbols-as-high-dimensional-vectors'.
-Briefly describe the utility.
+\section{Lambda Calculus}
+\label{sec:lambda_calculus}
+The lambda calculus arose from the study of \lq{}functions as rules\rq{} \cite{sep-lambda-calculus}, in particular the investigation of how functions could be used to exhibit/formalize theories in logic, and foundational mathematics.
+Putting aside some of the more formal discussion of its roots, the lambda calculus remained an obscure formalism until the 1960s when more \lq{}useful\rq{} mathematical semantics were found, and it became synonymous with computer language theory, and as a means of expressing computation.
+Since then it has seen extensive application in linguistics, and computer science \cite{heim1998semantics}, and as demonstrated in \cite{Turing1937}; is Turing complete.	
 
-Describe semantic binding.
+Within the context of this report it is not necessary to fully understand the subtleties involved in expressing computation in a \emph{language} of anonymous abstractions and applications.
+However it is helpful to have an understanding of the underlying syntax, as it is used to define the symbolic \emph{geometry} used within our model.
 
-\subsection{Lambda Calculus}
+\paragraph{Definition} From \cite{sep-lambda-calculus}: The alphabet of the lambda calculus takes the left and right parentheses, the dot \lq{}.\rq{}, the symbol \lq{}$\lambda$\rq{}, and an infinite set of variables.
+The class of \lq{}$\lambda$-terms\rq{} (valid lambda calculus expressions) are defined inductively as follows:
+\begin{enumerate} 
+\item Every variable is a $\lambda$-term.
+\item If $t$ and $s$ are $\lambda$-terms, then so is $(ts)$ (\emph{application}).
+\item If t is a $\lambda$-term and $x$ is a variable, then $(\lambda x.t)$ is a $\lambda$-term (\emph{abstraction}).
+\end{enumerate}
 
-Define LC informally.
+Ultimately, there are only two things we can do in lambda calculus, abstract, and apply, and that is enough, furthermore it can be shown that all functions can be expressed as compositions of unary functions (not shown here), and that lambda calculus is turing complete \cite{Turing1937}.
 
 \subsection{Church Numerals}
+\label{sec:church_numerals}
 
-Show the default Church Numeral Table.
+In mathematics, Church encoding/Numerals (hereafter the \lq{}Numerals\rq{}) represent data and operators in the lambda calculus.
+Specifically within untyped lambda calculus, it has been shown that by mapping more primitive types into higher-order functions, all computable operators (and arguments) can be represented under Church encoding \cite{sep-lambda-calculus}.
+This is of particular significance within the realm of symbolic processing, since Church encoding provides a general form of representing the natural numbers (for which there exist a great many other representations within the lambda calculus).
+The canonical ostensive definition of the Numerals is contained within Table~\ref{tab:church_numerals}.
 
-\section{Symbolic Enumeration}
+\begin{table}[H]
+\centering
+\begin{tabular}{c | l l}
+	Number		&	Lambda Expression			& Function Definition\\ \hline
+	0		& $\lambda f . \lambda x . x$ 		& 0 f x = x  \\
+	1		& $\lambda f . \lambda x. f \; x$ 	& 1 f x = f x \\
+	2		& $\lambda f . \lambda x .f \; (f \; x)$ & 2 f x = f (f x) \\
+	3		& $\lambda f . \lambda x .f \; (f \;  (f \; x))$ & 3 f x = f (f (f x)) \\
+	$\vdots$ & $\vdots$ & $\vdots$\\
+	n 		& $ \lambda f.\lambda x.f^n\;x$ 	& n f x = $f^{(n)} x$\\
+\end{tabular}
+\caption{Canonical Definition of the Church Numerals}
+\label{tab:church_numerals}
+\end{table}
 
-For this project the goal was to explore the extent to which arbitrary mathematical structures could be generated on a symbolic level.
-A good basis for this process (both due to personal interest, as well as due to its simplicity) is Lambda Calculus.
+Of note within the definition of the Numerals is that ultimately, the numeral represents the action of repeated function application (of the \emph{ZERO} numeral, which represents \emph{not} applying the function).
+
+Given the ostensive definition of the Numerals as recursive \emph{application} of an arbitrary function $f x \equiv \lambda f . \lambda x . x$ a formal definition of arithmetic functions can be designed.
+Complete tables and derivations of which can be found in \cite{sep-lambda-calculus} or \cite{Kemp:2007}.
+Within the context of this report, we will focus on the relatively simple definition of succesorship (and hence, addition) under Church Numerals.
+
+Intuitively, the concept of succession within the natural numbers is quite simple: we start from one number, and count \emph{one-higher}.
+Algebraically, successorship within the natural numbers is simply adding $1$.
+Within the realm of Church enumeration, we can see this relationship expressed as applying the function $f$ to itself \emph{one-more time}.
+
+Similarly, the concept of \emph{adding} two numerals $m, n$, is equivalent to the repeated \emph{enumeration} of $n$, $m$-times.
+This relationship is defined more explicitly in Table~\ref{tab:church_functions}.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{r | c l l}
+	Method		&	Algebra		& Function Definition  & Lambda Expression \\ \hline
+	Successor	& $n + 1$	& $succ\; n\; f\; x = f \; (n \; f\; x)$ & $\lambda n . \lambda f. \lambda x. f \; (n \; f \; x)$\\
+	Addition	& $n + m$  & $plus\; m\; n \; f \; x = m\; f \;(n\;f\;x)$ & $\lambda m . \lambda n . n\; succ\; m$\\
+\end{tabular}
+\caption{Definitions of Succession and Addition under the Church Numerals}
+\label{tab:church_functions}
+\end{table}
+
+The models depicted in this project aim to provide an evaluation/execution mechanism for the processing of Numeral-like computation under the vector symbolic architecture.
+
+\section{Semantic Binding as Abstraction and Application}
+
+As discussed in Section~\ref{sec:lambda_calculus}, arbitrary computation can be defined in terms of the construction of arbitrary lambda-expressions/terms.
+In Section~\ref{sec:church_numerals}, we outlined a simple encoding scheme that relies on enumeration to ostensively define the concept of natural numbers, specifically within the context of \emph{iteration}.
+Within this section we\rq{}ll look at how algebraic functions can be computed symbolically via the Church Numerals through the use of semantic \emph{binding}, this idea is extended to the more general sense where purely functional data structures and algorithms can be defined (all in lambda calculus) symbolically, but this last point is out of scope for this project.
+
+\subsection{Semantic Binding}
+
+As stated in \cite{stewart2011a}, binding using vector representations has been addressed through the use of a family of approaches  collectively under the umbrella of \lq\lq{}Vector Symbolic Architectures\rq\rq{} (VSAs) \cite{Gayler2003}.
+VSAs introduce an operation that combines (binds) two vectors creating a third that is geometrically distinct from either of the pair, furthermore this operation is invertible, allowing recovery of the \lq{}bound\rq{} vectors through an inverse operation.
+
+Within the context of this paper, circular convolution $\otimes$ was used to bind vectors, and circular correlation $\oslash$ as an approximately inverse process.
+Symbolic binding and retrieval allows for the construction of idealized structures (akin to abstract data structures in computer science) for use in arbitrary computation.
+Furthermore it has been demonstrated that neural models involving such structures can (with a reasonable amount of accuracy) be modelled in the NEF for linguistic processing---a fairly sophisticated task.
+Within this paper, we focus on much simpler structures, and the space that they occupy.
+
+\subsection{Symbolic Church Numerals}
+
+Given that we\rq{}ve defined Church Numerals, it is now important to note the importance of the zeroth Numeral.
+Within Church Encoding, there is no special \emph{value} associated with the zero-ith numeral (functionally: $f$, or canonically $\lambda f.\lambda x.x$), it is simply a lambda term representing a function that has not been applied to any arguments.
+In the vector-symbolic sense, it is a \emph{symbol} that for all intents and purposes is \emph{unbound}.
+Analogous to how each successive Numeral was defined through successive applications of the zero-ith numeral, each successive \emph{symbol} is defined through successive \emph{binding} of the zero-ith or \emph{root} symbol.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ r l l }
+	Numeral	& Symbol	& Symbolic Definition\\ \hline
+	0			& $ZERO$	& $ZERO$\\
+	1			& $ONE$	& $ZERO\otimes ZERO$\\
+	2			& $TWO$	& $ZERO\otimes ZERO\otimes ZERO$\\
+	\vdots 		& \vdots 	& \vdots\\
+	n 			& $N$ 		& $ZERO_0\otimes \ldots \otimes ZERO_{n}$\\
+\end{tabular}
+\caption{Symbolic Numerals via VSA Binding}
+\label{tab:symbolic_numerals}
+\end{table}
+
+As shown in Table~\ref{tab:symbolic_numerals}, there is a relatively natural translation from pure lambda application to symbolic binding--note the use of $N$ to describe the symbolic representation of the arbitrary natural number/numeral $n$.
+This representation also illuminates some interesting properties of the scheme (as well as on Church Numerals in general), in that the $ZERO$ symbol is interpreted as representing a \emph{function}, rather than a value; in that by \emph{binding} via $\otimes$ we are \emph{applying} the function $ZERO$ to an argument.
+The lack of distinction between functions and values is one of the primary characteristics of lambda calculus, (and pure functional programming in general).
+What is somewhat interesting, is that it ultimately doesn\rq{}t matter whether or not we treat a particular symbol as a function or data, so long as our schemes are internally consistent.
+
+Similar to Table~\ref{tab:chuch_functions}, we can define a set of symbolic functions a-la the lambda calculus defined in terms of binding rather than composition.
+Through the existence of the inverse binding (or \emph{extraction}) $\oslash$, we also get subtraction (predecessorship) for free, so long as it is not applied to $ZERO$.
+This is a serendipitous property of symbol binding which otherwise requires a more involved definition of predecessorship (and thus subtraction) via pure lambda calculus and our symbolic analog.
+Suffice to say that in the numerals $pred(0) = 0$, while algebraically $ZERO\oslash ZERO \neq ZERO$, this is ultimately an implementation detail that must be observed to reap the associated benefits of not performing arbitrary subtraction via full-blown lambda predecessorship.
+
+\begin{table}[H]
+\centering
+	\begin{tabular}{r | c l }
+	Method		& Algebra	& Symbolic Interpretation \\ \hline
+	Successor	& $n + 1$  	& $ZERO\otimes N$ 	\\
+	Addition	& $n + m$  	& $ZERO_1\otimes \ldots \otimes ZERO_m \otimes N$ \\
+	Predecessor & $n - 1$    & $ZERO\oslash N \; \forall N \neq ZERO$ \\
+	Subtraction  & $n - m$   & $ZERO_1\oslash \ldots \oslash ZERO_m \oslash N \; \forall n > m$\\
+	\end{tabular}
+	\caption{Arithmatic on Symbolic Numerals under VSA Binding}
+	\label{tab:symbolic_functions}
+\end{table}
 
 
-\section{System Description}
+\chapter{System Design}
 
-At the highest level, the system was designed to \emph{enumerate}.
-Akin to Church Numerals---which are defined in terms of repeated function application, I designed the system to replicate this process by way of repeated semantic \emph{binding}.
-The use of semantic pointers (or \emph{symbols}) to represent \emph{functions} in this way opens the door for arbitrarily intensive symbol processing.
+As with any vaguely neuromorphic system, the model was architected to contain some of the canonical cortical structures found within the mammalian brain.
+Specifically, regions well suited to massively parallel concurrent computation are delegated to the pseudo region entitled \lq{}\rq{}Cortex\rq{}\rq{}.
+The information contained within the Cortex is funnelled into the Basal Ganglia (another artifact from biology), which handles the prioritization of particular workloads (a.k.a. action selection).
+After which the cortical regions are updated with the processed work and the cycle is closed.
 
-On a more linguistic side, symbolic systems can be used to parse and interpret language, while in a more abstract sense, this facility yields a greater capability for truly general algorithms.
+Within this particular model the inputs are not to be interpreted as sensory (they are still representing symbols in the same \emph{space} as the working components), but could be considered to be outputs from similarly architected systems (such as an as-yet unbuilt generic neuromorphic lambda calculus engine), and similarly the system output should be given the same consideration.
 
-\subsection{Cortex}
+\section{Goals and Motivation}
 
-The cortex consists of the term-memory, and the associated neural machinery function application.
-The memory is shown in Figure~\ref{fig:cortex:memory}, and ideally consists of four high-dimensional integrators/buffers.
-The time constants on the buffers were chosen to be fast enough that relatively significant changes could be observed on small simulation time-scales.
-The value $\tau=20 [ms]$ seemed reasonable.
+Implementing a general symbolic lambda calculus machine in neurons is a relatively challenging proposition, both in terms of simulation expense, but also architecturally, and to do so in a biologically plausible manner requires a degree of symbolic processing knowledge that is outside of the scope of this project.
+Instead, we\rq{}ve focused on the design of a so-called \lq{}Numeral Processor\rq{}, which is capable of performing arbitrary iterative computations (in a manner not unlike a von Neumann machine) on the types of symbols described in Table~\ref{tab:symbolic_numerals}.
 
-\begin{figure}
-	\centering
-	\includegraphics[width=\textwidth]{figures/dummy.png}
-	\label{fig:cortex:memory}
+A simple model, that still retains significant expressive power is desired.
+The Numeral Processor designed and implemented thus performs addition congruent to Table~\ref{tab:symbolic_functions}, and implicitly performs subtraction in the same manner.
+
+A general system map is shown in Figure~\ref{fig:system_map}, each module or \emph{block} will be discussed to some depth in the following subsections.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/system_map.png}
+\caption{Functional overview of the prototype Numeral Processor, as implemented in the NEF. The system performs the Numeral computation $A + B$, by successively applying $B^\prime = F \otimes B$, and $A^\prime = F \oslash A$ until $A^\prime \cdot F$ is sufficiently small. This is analogous to decrementing $A$ via $\oslash$ until it is zero, after which returning $B^\prime$}
+\label{fig:system_map}
+\end{figure}
+
+Ultimately, the system \emph{iterates} the computation performed in the \lq{}Iterator\rq{} component in Figure~\ref{fig:system_map} until the value of $A^\prime$ becomes indistinguishable from $ZERO$ (which in the general sense can be attributed to any arbitrary symbol $F$, but in the case of Numeral operations: $ZERO$).
+
+The system receives its sensory input directly as Numeral symbols which are congruent under $\otimes$ (i.e. the computation will not converge if $ZERO$ is not in the set of Predecessors of $A$), after which the system iterates until it perceives through the \lq{}Similarity\rq{} block that the computation has converged.
+At this point the utility associated with opening the output gate exceeds that of keeping it closed, or continuing the computation, and a result symbol is returned to the \lq{}output\rq{} channel.
+
+\subsection{Model Algorithm}
+
+Through successive function application, the model performs Numeral addition of $A$ and $B$, this process is described below:
+
+\begin{algorithm}[htd]
+\KwData{$A$, $B$, $F$, s.t. $A \in succ_n F$}
+\While{$A \neq F$}{
+	$A := pred\; A$\;
+	$B := succ\; B$
+}
+\KwResult{B}
+\caption{Addition Under Numerals}
+\end{algorithm}
+
+Where $pred$ and $succ$ are defined under symbolic Numerals in Table~\ref{tab:symbolic_functions}.
+
+\section{Cortex}
+Nontrivial cortical components are outlined in the following section.
+It should be noted that the model relies heavily on the neural integrator (detailed in \cite{bekolay2014,stewart2011a}), which is used as working memory for the model, storing the current values of $A^\prime$ and $B^\prime$.
+
+
+\subsection{Iterator}
+This component performs the actual computation associated with a given Numeral iteration.
+The iterator transforms the input symbols $A, B$ into their next state $A^\prime, B^\prime$ by way of Eqs~\eqref{eq:iterator1} and~\eqref{eq:iterator2}.
+
+\begin{align}\label{eq:iterator1}
+	A^\prime &= F \oslash A\\
+	B^\prime &= F \otimes A
+	\label{eq:iterator2}
+\end{align}
+
+By using VSA, the model is able to make use of the NEF Circular Convolution Ensemble, which is featured in Fig.~\ref{fig:iterator_map}.
+
+\begin{figure}[htd]
+\centering
+\includegraphics[width=\textwidth]{figures/iterator_map.png}
+\caption{The Iterator simultaneously computes $A - F \equiv F\oslash A$ and $B + F \equiv F \otimes B$ through the use of Circular Convolution Ensembles}
+\label{fig:iterator_map}
+\end{figure}
+
+\subsection{Are We There Yet?---Assessing Similarity}
+The control pathways of this model rely heavily on the similarity between $A^\prime$, and the goal state: $F$  (colloquially $ZERO$ in the addition case). 
+Symbolically, such similarity can be expressed as the dot-product between the two vectors representing $A^\prime$ and $F$ respectively, and so the \lq{}Similarity\rq{} block in Fig.~\ref{fig:system_map} does just that.
+Explicitly, it implements $A \cdot B = \sum^d_i  A_i B_i$.
+
+This is necessary to determine (in a very general sense), whether the model can consider itself finished iterating.
+While at the core, this component controls whether or not to continue iterating, its value is transformed into twin utility scores which are used as input to the Basal Ganglia.
+Furthermore, given the large amount of noise in the system (due to simulation constraints) it is unlikely that similarity scores (dot products) will be fairly high.
+To combat this, the utility functions $Q_{loop}$ and $Q_{return}$ were designed to place a threshold on what the model considers \lq{}close enough\rq{}.
+This was largely done experimentally to control when, and for how long a given loop-cycle can take.
+
+The NEF transformation function was designed to exploit the ensembles saturation, while also setting the decision boundary for what the model considers \lq{}similar\rq{}.
+Specifically, given the similarity score $s = A \cdot F$, the utility associated with continuing to iterate $Q_{loop} = 10s - 2.5$ and the complement utility (associated with returning) is simply $Q_{return} = - Q_{loop}$.
+
+\begin{figure}[htd]
+\centering
+\includegraphics[width=3in]{figures/utility.png}
+\caption{Sharp linear utility functions. Everything with a similarity score higher than 2.5 triggers a function return}
+\label{fig:utility}
 \end{figure}
 
 
-\begin{figure}
-	\centering
-	\includegraphics[width=\textwidth]{figures/dummpy.png}
-	\label{fig:cortex:applier}
+\section{Action Selection and Execution}
+The line between action selection and execution is somewhat blurred in this model, specifically because cortical regions continue to perform computation, and the Thalamus/Basal Ganglia (BG) loop simply controls whether the system output is \emph{visible}.
+
+\subsection{Basal Ganglia}
+
+Given that the resulting behavior (either keep looping, or expose the output) is a function of the similarity between the current, and goal states, it was necessary to introduce a sort-of binary control circuit that operates in a similar fashion to discrete logic components.
+Central to this idea of logical control flow is the \lq{}selection\rq{} of a particular action to take, the canonical application for the Basal Ganglia (both biologically, and in the NEF).
+
+The Basal Ganglia receives a transformed version of the output of the Similarity block, which is essentially bifurcated into \lq{}\lq{}similarity\rq{}\rq{}, and \lq{}\lq{}dissimilarity\rq{}\rq{}, which are interpreted as the utility associated with continued iteration, and the utility associated with returning a value to the output.
+
+The BG circuit used was the de-facto standard BG model in Nengo 2.0 \cite{bekolay2014}, which is an adaptation of the model proposed by Gurney, Prescott and Redgrave in \cite{GurneyPrescottRedgrave01a}.
+
+\subsection{Thalamus}
+
+The Thalamus as used in the NEF is typically associated with action execution, and control flow.
+Within the design outlined in Fig.~\ref{fig:system_map}, the Thalamus as a component is simply a unit which translates the inhibitory signals from the Basal Ganglia into a \lq{}one-hot\rq{} representation.
+
+This each dimension of the \lq{}one-hot\rq{} vector output from the Thalamus is fed into the associated \emph{gate}, in a manner similar to scalar multiplication.
+This in essence turns the gate components into a continuous version of a logical \lq{}AND\rq{} gate, by using a population of \lq{}positive\rq{} neurons whose output can be  heavily suppressed/inhibited by the control signal emanating from the thalamus.
+
+The \lq\lq{}Loop?\rq\rq{} gate in Fig~\ref{fig:system_map} controls whether the enumerated values $A^\prime$ and $B^\prime$ are fed back into their respective integrators.
+Similarly, the \lq\lq{}Return?\rq\rq{} gate is maintained in the opposite state as the \lq\lq{}Loop?\rq\rq{} gate, and controls whether the current $B^\prime$ value is projected to the output.
+Ideally, once $A^\prime$ is similar to $F$ (as defined in the Similarity block), the integrators will maintain their respective values (subject to drift).
+Thus once the enumeration has concluded, we expect the output value to slowly degrade as well.
+
+
+\chapter{System Specification}
+
+Given the use of Leaky Integrate and Fire (LIF) neurons, the individual neuron populations in the model were generally left at their default values. 
+The post-synaptic time constants throughout the system are loosely based on the expected spatial layout of the system, which loosely maps to the physical layout of the brain.
+Specifically, this means that the post-synaptic time constants $\tau$ between the basal and cortical regions are relatively high (on the order of 8 ms), while the intercortical $\tau$ values hover around 5 ms.
+
+Similarly, the neurons in the Basal Ganglia circuit were left with their default values which are accessible in \cite{bekolay2014}, and described in more detail in Table~\ref{tab:model_specification}.
+In general, the BG circuit involves neurons that are sensitive to high-frequency input (smaller post-synaptic time constants), but slower to inhibit, with peak firing rates in the ballpark of 100 Hz.
+
+\section{Language Processing as Symbolic Processing}
+
+In order to design a biologically \emph{realistic} system it is necessary to draw critical biological parameters from neuroscience.
+However, our goal was to put forward a biologically \emph{plausible} mechanism for abstract enumeration, and thus in some sense, we found useful neural properties by projecting the model back on the brain.
+This was done by abstractly modelling the form of information processing the model is performing, and draw analogies between that and cognition.
+
+Lambda calculus is Turing complete, it can thus represent \emph{all} effective computation, however it is not sufficient to simply illustrate that the brain computes, and move on.
+In particular, the Numeral Processing model we have described performs iterative symbolic manipulation, a form of computation closely language to language processing.
+Suffice to say that the computation is being performed on a very high/abstract level, and it is likely that similar computation is performed in regions connected to equally abstract thought---language processing being a prime example.
+
+\section{Symbolic Constraints}
+Given that vector-symbolic representations require suitably high-dimensional vectors for representation, it is necessary to balance the desire for a sufficiently high-dimensional vector representation, with the representational error associated with a fixed neural population.
+In \cite{stewart2014} NEF ensembles in a circular convolution network were shown to exhibit significant noise (and thus error), and that 50-100 neurons/per dimension were required for successful symbol parsing.
+However, due to significant hardware limitations, the Numeral Processing model had to operate in the ballpark of roughly 32-neurons per dimension (for the Cortex units).
+
+\subsection{Wernicke\rq{}s Area}
+A brain area commonly associated to language processing is Wenicke\rq{}s Area (thought to be located in the posterior part of Brodmann Area 22) \cite{Brogen1976}.
+However, within the scope of this project (particularly given the fidelity of the model), it is unlikely that matching the neuron properties of the cortical areas of the system to Type I, and II neurons in Wernicke\rq{}s area will offer any outstanding functional benefit---a problem that is addressed by referencing existing models in similar domains, but particularly those using the NEF.
+
+\subsection{Component Parameters}
+Given the the simultaneously low availability of LIF parameters (most literature on Wernicke\rq{}s area models using Hodgekin-Huxley), and the relative lack of direct applicability (after all, we\rq{}re modelling general abstract computation, not necessarily language---although the similarity is evident) to Wernicke\rq{}s area, model parameters were sourced from existing prototypes operating in a similar domain.
+Thus the neuron properties were matched on a per-component basis using reference values from \cite{stewart2014} which deals with a similar symbolic domain (linguistic parsing), and \cite{stewart2011a} which indicates that \lq{}state\rq{} values (symbols representing a given goal, or process) can be effectively represented with 128-dimensions, with approximately 20-neurons per dimension.
+
+Fig.~\ref{tab:model_specification} outlines the various model parameters. 
+In general, the model uses 128-dimensional vectors to represent the Numerals ($A$, $B$, and $F$ in Fig~\ref{fig:system_map}), and all associated specialized components (Similarity, and Iterator) use 32-neurons per dimension.
+
+
+\begin{table}
+\centering
+\begin{tabular}{r | l l l l l}
+	Component		&	Dimensions	& Number of Neurons  & Encoder  & Rates  & $\tau$\\ \hline
+	Integrators	(x2)	&	128			& 4096				    & random  & 40-200 Hz  & 10 ms\\
+	Iterator 			&	128 x 2		& 8192			    & random  & 40-200 Hz  & 5 ms\\
+	Similarity	(Map Phase) 	&	128 & 2560  & random  & 40-200 Hz & 2 ms \\
+	Similarity	(Reduce Phase) 	&	1 & 64  & [1]  & 40-200 Hz & 8 ms \\
+	Basal Ganglia  (excite, inhibit)	&  2			&	 600				    & [1]  & 0-100 Hz  & 2, 8 ms\\
+	Thalamus Actuator (x3) & 1 & 64   &  [1] & 0-100 Hz  & 2 ms\\
+	Thalamus Gate (x3)  & 128 & 4096 & random & 40-200 Hz & 8 ms\\ 
+\end{tabular}
+\caption{Specification of Neuron Parameters by Component}
+\label{tab:model_specification}
+\end{table}
+
+
+\chapter{Implementation}
+
+The model was implemented in Nengo 2.0 \cite{bekolay2014}, and as such utilized many template components.
+Among those were the high-dimensional integrators, the circular convolution (and associated inverse) block, and the Basal Ganglia circuit.
+Within this chapter, the design and implementation of custom NEF components are detailed and explained. 
+This includes the Thalamus-like \lq{}gates\rq{}, which are currently unavailable within Nengo 2.0, and the Similarity module which at its core computes the dot-product between two vectors without exploding the dimensionality of a particular ensemble.
+
+\section{Determining Similarity}
+The Similarity component is designed to ascertain the relative alignment of two arbitrarily high-dimensional inputs.
+Given two vectors/symbols $A$, and $B$, the Similarity component returns the vector dot-product $A \cdot B$.
+
+When computing functions that are the result of multiple input values, a common pattern within the NEF is to construct an intermediary group of neurons, that is twice the dimensionality of each input vector, and then decode out the desired result, a rather expensive proposition on slow hardware.
+For particularly high-dimensional values this can also cause sparsity problems (i.e. curse of dimensionality).
+Admittedly, on the scale of this simulation (128-dimensional), simply \lq{}exploding\rq{} the dimensionality and taking the traditional path is entirely possible and reasonable.
+However, in the interest of generality, we implemented an abstract element-wise operator pattern, which consists of generating a small ensemble of neurons (an Ensemble Array) for each common input subspace/dimension of the two inputs, and symmetrically computing an arbitrary function within each sub-ensemble---in the case of a dot product this equates to a simple multiplication.
+The scalar output of each sub-ensemble is then connected directly to a single small \lq{}reducer\rq{} ensemble, which simply implicitly evaluates the sum.
+
+In our scenario involving the computation of a dot product, the fidelity of the element-wise operators (low dimensional) can be increased dramatically through the use of evenly spaced encoders, a luxury that can in some situations enable us to use fewer neurons-per-dimension, decreasing the computational burden of the operation.
+
+\section{Thalamus Gates}
+In a similar style to \cite{stewart2011a}, the Thalamus system is comprised of an ensemble of neurons with strictly positive encoders.
+Thus, when receiving inhibitory input from the BG circuit, they essentially turn off, however when the inhibitory signal is lifted, they chatter away happily (one can imagine).
+The end goal of this roundabout method is transforming the inhibitory BG signal into a \lq{}one-hot\rq{} representation.
+
+Looking at a single dimension of the \lq{}one-hot\rq{} signal, the signal is \emph{broadcast}, or \emph{mapped} to a BinaryElementwiseOperation array as defined in Appendix~\ref{app:dot_product.py}, which acts as a scalar multiplication circuit, where the control signal (one-hot) is multiplied with each dimension of the controlled signal.
+In the case of the Thalamus gates, these control when the integrators are refreshed with new state.
+A probe of a gated integrator input from the model simulation illustrates this effect in Fig.~\ref{fig:thalamus_gate_sim}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=5.4in]{figures/thalamus_gate.png}
+\caption{Thalamus Gate: The Inhibitory control input is transformed to scalar multiplication.}
+\label{fig:thalamus_gate_sim}
 \end{figure}
 
-\section{Design Specification}
+\chapter{Simulation}
+While it is all well and good to propose a high-dimensional symbolic processing network, it is another entirely to run it.
+Through the usage of Nengo 2.0---which is at this moment still quite young, we were unable to perform even moderate scale simulations---specifically building simulators with many ensembles.
+In order to perform simulations with a shred of interactivity (without hour-long \lq{}compiling breaks\rq{}), the number of dimensions had to be reduced to 10 (for the symbolic components) it was found that this was due to a severe limitation with the graph reduction operations performed by the underlying model builder (which was compounded through our extensive use---perhaps abuse, of EnsembleArrays), however the number of neurons in the model was not a limiting factor, and so they were maintained at 52-neurons per dimension.
+However, even under these conditions the Similarity, Basal Ganglia, and Thalamus Gate neural circuits performed well.
 
-In order to present a model that is vaguely biologicaly plausible, it is useful to draw analogies between symbol processing models, and brain regions with similar function.
-Symbol processing, particularly parsing and perhaps function application is a canonical computational task performed in language processing.
-As such, neuron parameters were drawn from areas canonically associated with language processing (particularly listening vs. speaking).
-Namely, Brodman area 22---the home of Wernicke's area.
-Furthermore, it has been suggested that the neural resources used for language processing (in Wernicke's area of not), are also used for processing information in other domains as well, giving some credence that the processing is symbolic/general, rather than domain-tuned.
+Throughout the simulation, the model had a hard time differentiating between symbols generated from circular convolution.
+In particular, the similarity between (for example), the true $ZERO$ symbol, and the identity equivalent $ZERO \oslash ONE$ was marginal at best.
 
-The Basal Ganglia was modelled with parameters from (TERRY's PAPER, ORIGINAL PAPER), and is used to handle control flow throughout the model.
+\section{Runaway Error}
+Given that the \lq{}stopping criterion\rq{} is rarely met in simulation (we never truly \lq{}find\rq{} $ZERO$), in fact if left long enough, the integrators will drift until they become dissimilar to $ZERO$, at which point the model starts looping until it (through essentially unguided random exploration) transforms $A$ into something similar to $ZERO$ and returns.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/integrators.png}
+\caption{The internal state of the model\rq{}s integrators, as measured by similarity with preprocessed symbols.}
+\label{fig:integrators}
+\end{figure}
+
+The interpretation of the symbolic state of the integrators in the model is conducted by computing the dot product between a set of prepared semantic pointers.
+The similarity score is then plotted over time to differentiate the exposure of a particular symbol.
+This is shown in Fig.~\ref{fig:integrators}.
+Note the path of the \lq{}most-similar\rq{} symbol in the plot for the $A$ integrator: starting from an initial value of $ONE$ the integrator began representing a state half-way between $ONE$ and $ZERO$ rather than simply shifting to $ZERO$.
+Oddly enough, this behavior was replicated to a greater extent with the integrator for $B$, which was expected to transition from $TWO$ to $THREE$, however possibly due to representational error associated with non-orthogonal symbols, it picked up components of $ZERO$ along with the desired $THREE$, as well as not reducing its grasp of $TWO$.
+It is likely the recurrent time constants associated with the integrators could be tuned to reduce the likelihood of being caught in a \emph{transient} state.
+
+The relationship between the utility scores and associated Basal Ganglia action suppression is shown in Figs.~\ref{fig:utility_sim}, and ~\ref{fig:bg_output}.
+Of particular interest is the indecision related to similar Q-values.
+During the simulation, the first peak of $Q_{return}$ occurs near 0.7-seconds.
+At this time, the integrators are no longer being refreshed with the data that yielded a highly similarity between $ZERO$ and $A$, this leads to drift, followed by a response cycle into the \lq{}loop\rq{} state.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=3in]{figures/utility_sim.png}
+\caption{The utility values driving the Basal Ganglia.}
+\label{fig:utility_sim}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=3in]{figures/bg_output.png}
+\caption{The Inhibitory output of the Basal Ganglia. Note the continued emphasis on Looping}
+\label{fig:bg_output}
+\end{figure}
 
 
+\chapter{Conclusions and Future Work}
+Ultimately, the model as simulated does not possess the capability for arbitrarily deep Church enumeration.
+This is due both in part to the accumulation of error within the function application process (semantic binding), as well as the severely reduced fidelity that was required to simulate the model on aged hardware.
+The largest model that could be run pseudo-interactively was on the order of 3-thousand neurons---with a symbolic network this is not even close to enough, especially in a network designed to repeatedly apply what ends up being a very noisy operation (semantic binding/retrieval).
+As a result, the similarity between the numeral vectors could bleed into the calculation quite easily, skewing the accuracy.
+Interestingly, this manifested itself as the network deciding to \lq{}return\rq{} a value, rather than an \lq{}infinite loop\rq{}.
 
+On a more philosophical note it is interesting to ask what a successful result would imply.
+If such a model were successful, it could open the door to posing arbitrary computational problems, and simulating in a biologically plausible way, a method by which they could be computed.
+Similarly, if the model proposed was successful, it could become a small symbolic unit for more complex algorithms.
+Instead of simple enumeration, data structures could be created and operated on, the only limit is the model\rq{}s ability to comprehend them---which would be an interesting bit of information.
+Given that church enumeration is possible, and that successive semantic binding (function application) can occur without propagating too much error, it should be possible to perform arbitrarily complex computations.
 
+The dream is to have a biologically plausible model implementing lambda calculus, which will demonstrate why understanding how such a model works is difficult.
 
-
-
-
+\newpage
 \bibliographystyle{IEEEtran}
 \bibliography{bib}
+
+\newpage
+
+\begin{appendices}
+This section contains only original code.
+
+For libraries used, refer to the complete repository at:
+
+http://www.github.com/athuras/MentalMath.
+
+\chapter{model.py}
+The underlying model as implemented in Nengo 2.0.
+\lstinputlisting{../model.py}
+
+\chapter{dot\_product.py}
+\label{app:dot_product.py}
+Constructs for MapReduce, Thalamus Gate, and Linear Element-wise operations that utilize nengo.EnsembleArray.
+\lstinputlisting{../dot_product.py}
+
+\chapter{symbols.py}
+Used to generate comparison symbols.
+\lstinputlisting{../symbols.py}
+
+\end{appendices}
+
 
 \end{document}

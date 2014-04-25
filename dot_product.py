@@ -1,5 +1,6 @@
 from nengo.networks.ensemblearray import EnsembleArray
 from nengo.utils.network import with_self
+from nengo.utils.distributions import Uniform
 import nengo
 import numpy as np
 
@@ -67,9 +68,27 @@ class MapReduceDotProduct(nengo.Network):
         # from LinearElementwiseOperation.output, we'll go directly
         # to the ensembles for free addition!
         nengo.Connection(self.map_phase.output, self.reducer,
-                synapse=0.005, transform=np.ones((1, leo_dimensions)))
+                synapse=0.002, transform=np.ones((1, leo_dimensions)))
 
         self.A = self.map_phase.A
         self.B = self.map_phase.B
         self.output = nengo.Node(size_in=1, label='output')
         nengo.Connection(self.reducer, self.output)
+
+class ThalamusGate(nengo.Network):
+    '''elementwise multiplication of high-dimensional signal A with scalar
+    inhibitory signal :inhibit'''
+    def __init__(self, A, inhibit, inhibit_transform, mapper_neurons, control_neurons):
+        self.main_input = A
+        self.map_phase = BinaryElementwiseOperation(neurons=mapper_neurons,
+                                                    dimensions=A.size_out)
+        self.control = nengo.Ensemble(neurons=control_neurons, dimensions=1,
+                                      radius=1.,
+                                      encoders=np.ones((control_neurons.n_neurons, 1)),
+                                      max_rates=Uniform(8, 128))
+        nengo.Connection(inhibit, self.control, transform=inhibit_transform, synapse=0.006)
+        nengo.Connection(self.main_input, self.map_phase.A, synapse=0.002)
+        nengo.Connection(self.control, self.map_phase.B, synapse=0.002,
+                transform=np.ones((A.size_in, 1)))
+
+        self.output = self.map_phase.output
